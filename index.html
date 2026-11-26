@@ -1,0 +1,377 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>おみくじ 神社デジタル儀式 運勢アプリ</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<style>
+  @import url('data:text/css,');
+  body { background: #1a0a00; }
+  .shrine-bg {
+    background: linear-gradient(180deg, #1a0a00 0%, #2d1200 40%, #1a0a00 100%);
+    min-height: 100vh;
+  }
+  .lantern {
+    display: inline-block;
+    width: 40px; height: 60px;
+    background: linear-gradient(180deg, #cc2200, #ff4400);
+    border-radius: 50% 50% 40% 40%;
+    box-shadow: 0 0 20px #ff6600, 0 0 40px #cc2200;
+    position: relative;
+    animation: lanternSway 3s ease-in-out infinite;
+  }
+  .lantern::before {
+    content: '';
+    position: absolute;
+    top: -8px; left: 50%;
+    transform: translateX(-50%);
+    width: 10px; height: 12px;
+    background: #8B6914;
+    border-radius: 2px;
+  }
+  .lantern::after {
+    content: '';
+    position: absolute;
+    bottom: -6px; left: 50%;
+    transform: translateX(-50%);
+    width: 14px; height: 8px;
+    background: #8B6914;
+    border-radius: 2px;
+  }
+  @keyframes lanternSway {
+    0%,100% { transform: rotate(-3deg); }
+    50% { transform: rotate(3deg); }
+  }
+  .omikuji-stick {
+    width: 16px; height: 120px;
+    background: linear-gradient(180deg, #f5e6c8, #e8d5a3);
+    border-radius: 4px 4px 2px 2px;
+    display: inline-block;
+    position: relative;
+    transform-origin: bottom center;
+    box-shadow: 2px 2px 6px rgba(0,0,0,0.5);
+  }
+  @keyframes stickShake {
+    0% { transform: rotate(0deg); }
+    10% { transform: rotate(-15deg); }
+    20% { transform: rotate(15deg); }
+    30% { transform: rotate(-20deg); }
+    40% { transform: rotate(20deg); }
+    50% { transform: rotate(-15deg); }
+    60% { transform: rotate(15deg); }
+    70% { transform: rotate(-10deg); }
+    80% { transform: rotate(10deg); }
+    90% { transform: rotate(-5deg); }
+    100% { transform: rotate(0deg); }
+  }
+  .shaking { animation: stickShake 1.5s ease-out; }
+  .result-card {
+    background: linear-gradient(135deg, #fff9e6, #fff3cc);
+    border: 3px solid #8B6914;
+    box-shadow: 0 0 30px rgba(255,180,0,0.3);
+  }
+  .fortune-text { font-family: 'Hiragino Mincho ProN', 'Yu Mincho', serif; }
+  .btn-draw {
+    background: linear-gradient(180deg, #cc0000, #880000);
+    border: 3px solid #ff4444;
+    box-shadow: 0 0 20px rgba(200,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.2);
+    transition: all 0.2s;
+  }
+  .btn-draw:hover { box-shadow: 0 0 30px rgba(200,0,0,0.8), inset 0 1px 0 rgba(255,255,255,0.2); transform: translateY(-2px); }
+  .btn-draw:active { transform: translateY(1px); }
+  .history-item { border-left: 3px solid #8B6914; }
+  .daikichi { color: #ff0000; text-shadow: 0 0 10px rgba(255,0,0,0.5); }
+  .kichi { color: #ff8800; }
+  .chuukichi { color: #ffcc00; }
+  .shoukichi { color: #88cc00; }
+  .suekichi { color: #00aaff; }
+  .kyou { color: #666; }
+  .daikyou { color: #440044; }
+  .torii {
+    display: flex; justify-content: center; align-items: flex-end; gap: 60px;
+    height: 80px; position: relative; margin-bottom: -10px;
+  }
+  .torii-pillar { width: 12px; height: 70px; background: #cc2200; border-radius: 2px; }
+  .torii-beam { position: absolute; top: 0; left: 50%; transform: translateX(-50%); width: 160px; height: 14px; background: #cc2200; border-radius: 4px; }
+  .torii-beam2 { position: absolute; top: 20px; left: 50%; transform: translateX(-50%); width: 140px; height: 10px; background: #cc2200; border-radius: 2px; }
+</style>
+</head>
+<body class="shrine-bg text-white">
+<div class="max-w-lg mx-auto px-4 py-8">
+  <!-- Header -->
+  <div class="text-center mb-6">
+    <div class="flex justify-center gap-16 mb-4">
+      <div class="lantern"></div>
+      <div class="lantern" style="animation-delay:1.5s"></div>
+    </div>
+    <div class="torii">
+      <div class="torii-pillar"></div>
+      <div class="torii-beam"></div>
+      <div class="torii-beam2"></div>
+      <div class="torii-pillar"></div>
+    </div>
+    <h1 class="text-3xl font-bold fortune-text text-yellow-300 mt-4" style="text-shadow:0 0 20px rgba(255,200,0,0.8)">
+      ⛩ デジタルおみくじ ⛩
+    </h1>
+    <p class="text-yellow-600 text-sm mt-1">心を静め、お参りをしてからお引きください</p>
+  </div>
+
+  <!-- Omikuji Box -->
+  <div class="text-center mb-6">
+    <div id="stickContainer" class="inline-block mb-6" style="height:140px; display:flex; align-items:flex-end; justify-content:center; gap:4px">
+      <div class="omikuji-stick" id="stick1"></div>
+      <div class="omikuji-stick" id="stick2" style="height:100px; opacity:0.7"></div>
+      <div class="omikuji-stick" id="stick3" style="height:85px; opacity:0.5"></div>
+    </div>
+    <div>
+      <button id="btnDraw" class="btn-draw text-white font-bold py-4 px-10 rounded-full text-xl fortune-text" aria-label="おみくじを引く">
+        🎋 おみくじを引く
+      </button>
+    </div>
+    <p id="alreadyDrawn" class="text-yellow-500 text-sm mt-2 hidden">本日はすでにお引きになりました</p>
+  </div>
+
+  <!-- Result -->
+  <div id="resultSection" class="hidden mb-6">
+    <div class="result-card rounded-2xl p-6 text-gray-800">
+      <div class="text-center mb-4">
+        <div id="fortuneTitle" class="text-5xl font-bold fortune-text mb-1"></div>
+        <div id="fortuneDate" class="text-sm text-gray-500"></div>
+      </div>
+      <div class="grid grid-cols-2 gap-3 mb-4">
+        <div class="bg-red-50 rounded-lg p-3">
+          <div class="text-xs text-red-400 font-bold mb-1">❤ 恋 愛</div>
+          <div id="msgLove" class="text-xs text-gray-700 fortune-text"></div>
+        </div>
+        <div class="bg-blue-50 rounded-lg p-3">
+          <div class="text-xs text-blue-400 font-bold mb-1">💼 仕 事</div>
+          <div id="msgWork" class="text-xs text-gray-700 fortune-text"></div>
+        </div>
+        <div class="bg-green-50 rounded-lg p-3">
+          <div class="text-xs text-green-400 font-bold mb-1">🍃 健 康</div>
+          <div id="msgHealth" class="text-xs text-gray-700 fortune-text"></div>
+        </div>
+        <div class="bg-yellow-50 rounded-lg p-3">
+          <div class="text-xs text-yellow-500 font-bold mb-1">📚 学 業</div>
+          <div id="msgStudy" class="text-xs text-gray-700 fortune-text"></div>
+        </div>
+      </div>
+      <div class="border-t border-yellow-200 pt-3 grid grid-cols-3 gap-2 text-center text-xs">
+        <div>
+          <div class="text-gray-400">ラッキーカラー</div>
+          <div id="luckyColor" class="font-bold text-sm"></div>
+        </div>
+        <div>
+          <div class="text-gray-400">ラッキーナンバー</div>
+          <div id="luckyNumber" class="font-bold text-sm"></div>
+        </div>
+        <div>
+          <div class="text-gray-400">ラッキー方角</div>
+          <div id="luckyDirection" class="font-bold text-sm"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- History -->
+  <div id="historySection" class="hidden">
+    <h2 class="text-yellow-400 text-sm font-bold mb-2 fortune-text">📜 過去7日の履歴</h2>
+    <div id="historyList" class="space-y-1"></div>
+  </div>
+</div>
+
+<script>
+const FORTUNES = [
+  { name:'大吉', weight:20, cls:'daikichi', emoji:'🌟' },
+  { name:'吉',   weight:15, cls:'kichi',    emoji:'✨' },
+  { name:'中吉', weight:15, cls:'chuukichi', emoji:'⭐' },
+  { name:'小吉', weight:10, cls:'shoukichi', emoji:'🌸' },
+  { name:'末吉', weight:10, cls:'suekichi',  emoji:'🍀' },
+  { name:'凶',   weight:20, cls:'kyou',      emoji:'🌧' },
+  { name:'大凶', weight:10, cls:'daikyou',   emoji:'⛈' },
+];
+
+const MESSAGES = {
+  love: {
+    大吉: ['素晴らしい出会いが待っています。積極的に行動しましょう。','愛に満ちた時期。想いを伝えれば必ず通じます。','縁結びの神様があなたを守っています。','恋の花が満開に咲く季節。大切な人を大切に。','運命の相手との出会いが近づいています。'],
+    吉:   ['良縁に恵まれる時期です。焦らず自然体で。','温かい人間関係に恵まれます。','大切な人との絆が深まるでしょう。','恋の進展が期待できます。誠実に向き合って。','穏やかな愛情が育まれます。'],
+    中吉: ['少しずつ前進する愛の道。着実に歩みましょう。','相手の気持ちを丁寧に聞くことが大切。','今は焦らず、じっくり信頼を築く時期。','小さな幸せを大切に。積み重ねが実ります。','誠実な気持ちが伝わります。'],
+    小吉: ['今は縁を育てる土台作りの時期。','些細な幸せに気づける心を持って。','急がずゆっくりと関係を築きましょう。','小さな喜びが愛を育てます。','相手のペースを尊重することが吉。'],
+    末吉: ['恋の実りはもう少し先。準備を整えましょう。','今は自分磨きの時期かもしれません。','縁はあります。でも今は焦らずに。','少しの辛抱が大きな幸せへ繋がります。','内面を磨けば、自然と縁が訪れます。'],
+    凶:   ['恋愛において慎重な行動を。焦りは禁物。','今は自分自身を見つめ直す時期。','期待しすぎずに、現実を受け入れて。','一人の時間を大切に過ごしましょう。','良縁を待ちながら、自己成長に努めて。'],
+    大凶: ['今は恋愛より自己を磨く時期です。','縁薄き時期ですが、必ず好転します。','相手を追わず、自分を高めることに集中。','今は休息を。強く育てば縁もやってくる。','諦めずに、自分らしく歩み続けましょう。'],
+  },
+  work: {
+    大吉: ['仕事は絶好調。大きなプロジェクトに挑戦を！','上司や同僚に恵まれ、実力が発揮できます。','努力が実を結ぶ絶好の時期。攻めに出て！','チームワークで大きな成果が生まれます。','昇進・評価アップの吉兆あり。'],
+    吉:   ['堅実な努力が認められます。','良い仕事仲間に恵まれるでしょう。','目標に向かって着実に前進できます。','アイデアが実現しやすい時期です。','仕事に充実感が得られるでしょう。'],
+    中吉: ['地道な積み重ねが大切な時期。','チームと協力して課題を乗り越えて。','今の仕事に誠実に取り組めば道は開けます。','少しずつですが、確実に前進しています。','焦らず、基礎を固めることが吉。'],
+    小吉: ['小さな成功が積み重なります。大切に。','今は学びの時期。知識を蓄えましょう。','丁寧な仕事が信頼を生みます。','ミスを恐れずに挑戦し続けて。','準備を怠らなければ良い結果が出ます。'],
+    末吉: ['今は守りの時期。リスクは避けて。','仕事の見直しをする良い機会かもしれません。','焦らず、じっくり取り組むことが大切。','小さな改善の積み重ねが実を結びます。','今の状況を維持することに注力して。'],
+    凶:   ['仕事でミスが起きやすい時期。慎重に。','過度な無理は禁物。体調管理を優先して。','今は大きな決断を避けたほうが無難。','周囲との連携を密にして乗り越えましょう。','困難も成長の糧。前を向いて進んで。'],
+    大凶: ['大きな変化には慎重に対処を。','今は守りを固める時期です。','困難があっても、必ず乗り越えられます。','焦らず、一歩一歩着実に進みましょう。','この試練が後の大きな飛躍の土台になります。'],
+  },
+  health: {
+    大吉: ['心身ともに絶好調！この調子を維持して。','エネルギーに満ち溢れています。運動も吉。','体の声を聞きながら充実した毎日を。','健康は最大の財産。今の状態を大切に。','生命力が輝いています。積極的に動いて。'],
+    吉:   ['体調は良好。規則正しい生活を続けて。','適度な運動が体をさらに整えます。','心のバランスも保たれています。','健康的な食事が良い結果をもたらします。','今の生活習慣を維持しましょう。'],
+    中吉: ['少し疲れが溜まっているかもしれません。','適度な休養を心がけましょう。','バランスの良い食事が体を整えます。','今は無理をせず、体のリズムに従って。','軽い運動で体の調子を整えましょう。'],
+    小吉: ['睡眠をしっかりとることが大切。','栄養バランスを意識した食生活を。','ストレスを溜め込まないように工夫を。','少しの運動習慣が体を元気にします。','今は養生する時期かもしれません。'],
+    末吉: ['体調の変化に敏感になりましょう。','無理は禁物。休める時にしっかり休んで。','冷えや疲れに注意が必要な時期。','定期的な体のメンテナンスを心がけて。','体のサインを無視しないようにして。'],
+    凶:   ['体調不良に注意が必要です。早めの対処を。','疲労が溜まっている可能性があります。','過労には十分気をつけましょう。','今は養生を優先する時期です。','無理な運動は控えて、まず休息を。'],
+    大凶: ['健康に特に注意が必要な時期です。','早めの検診や受診をお勧めします。','体を休めることを最優先に。','精神的な疲労も溜まっているかもしれません。','今は療養に専念することが大切です。'],
+  },
+  study: {
+    大吉: ['学業は絶好調！目標を高く持って挑戦を。','記憶力・集中力が高まっています。','試験や発表で実力が発揮できます。','努力が確実に実力へと変わっています。','今が最大の学習チャンス。全力で！'],
+    吉:   ['勉強の成果が出やすい時期です。','集中して取り組めば大きな進歩が。','良い学習習慣を維持しましょう。','目標に向かって着実に前進できます。','先生や仲間のサポートに感謝して学んで。'],
+    中吉: ['少しずつ着実に理解が深まっています。','焦らず、基礎をしっかり固めましょう。','復習を大切にすることで力がつきます。','今の取り組みが後で大きく実を結びます。','丁寧な勉強が合格への近道です。'],
+    小吉: ['今は基礎固めの時期。地道に積み重ねて。','得意科目を伸ばすことに集中しましょう。','小さな目標を達成し、自信をつけて。','毎日の積み重ねが確実な力になります。','焦らず、マイペースで学び続けて。'],
+    末吉: ['勉強のスランプかもしれません。焦らずに。','方法を見直すことで突破口が開けます。','今は量より質を意識した学習を。','休憩を上手に取り入れて効率アップを。','一時的な停滞も成長の過程の一つです。'],
+    凶:   ['集中力が散漫になりやすい時期。工夫を。','環境を変えることで気分転換になるかも。','諦めずに続けることが大切な時期です。','基本に戻って、一から見直してみて。','今の苦労が後の大きな成果に繋がります。'],
+    大凶: ['学業において困難な時期ですが必ず打開できます。','今は無理せず、できることから始めましょう。','勉強法を根本から見直す良い機会かもしれません。','諦めない心が最大の武器です。','休息を取りながら、少しずつ前進して。'],
+  },
+};
+
+const COLORS = ['赤','橙','黄','緑','青','藍','紫','白','金','銀','桃','水色','朱','翠','紺'];
+const DIRECTIONS = ['北','北東','東','南東','南','南西','西','北西'];
+
+function seededRandom(seed) {
+  let s = seed;
+  return function() {
+    s = (s * 1664525 + 1013904223) & 0xffffffff;
+    return (s >>> 0) / 0xffffffff;
+  };
+}
+
+function getTodayString() {
+  const d = new Date();
+  return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
+}
+
+function getDateSeed(dateStr) {
+  let hash = 0;
+  for (let i = 0; i < dateStr.length; i++) {
+    hash = ((hash << 5) - hash) + dateStr.charCodeAt(i);
+    hash |= 0;
+  }
+  return Math.abs(hash);
+}
+
+function drawFortune(dateStr) {
+  const seed = getDateSeed(dateStr);
+  const rng = seededRandom(seed);
+  const totalWeight = FORTUNES.reduce((s,f)=>s+f.weight,0);
+  let rand = rng() * totalWeight;
+  let fortune = FORTUNES[FORTUNES.length-1];
+  for (const f of FORTUNES) {
+    if (rand < f.weight) { fortune = f; break; }
+    rand -= f.weight;
+  }
+  const pick = (arr) => arr[Math.floor(rng() * arr.length)];
+  return {
+    fortune,
+    love:      pick(MESSAGES.love[fortune.name]),
+    work:      pick(MESSAGES.work[fortune.name]),
+    health:    pick(MESSAGES.health[fortune.name]),
+    study:     pick(MESSAGES.study[fortune.name]),
+    color:     pick(COLORS),
+    number:    Math.floor(rng() * 9) + 1,
+    direction: pick(DIRECTIONS),
+    date:      dateStr,
+  };
+}
+
+function escapeHtml(s) {
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+function saveToHistory(result) {
+  let history = JSON.parse(localStorage.getItem('omikuji_history') || '[]');
+  history = history.filter(h => h.date !== result.date);
+  history.unshift({ date: result.date, fortune: result.fortune.name, emoji: result.fortune.emoji });
+  history = history.slice(0, 7);
+  localStorage.setItem('omikuji_history', JSON.stringify(history));
+}
+
+function renderHistory() {
+  const history = JSON.parse(localStorage.getItem('omikuji_history') || '[]');
+  if (history.length === 0) return;
+  const section = document.getElementById('historySection');
+  const list = document.getElementById('historyList');
+  section.classList.remove('hidden');
+  list.innerHTML = '';
+  history.forEach(h => {
+    const div = document.createElement('div');
+    div.className = 'history-item pl-3 py-1 text-sm flex justify-between';
+    const dateSpan = document.createElement('span');
+    dateSpan.className = 'text-gray-400';
+    dateSpan.textContent = h.date;
+    const fortuneSpan = document.createElement('span');
+    fortuneSpan.className = 'text-yellow-300 font-bold';
+    fortuneSpan.textContent = h.emoji + ' ' + h.fortune;
+    div.appendChild(dateSpan);
+    div.appendChild(fortuneSpan);
+    list.appendChild(div);
+  });
+}
+
+function showResult(result) {
+  const section = document.getElementById('resultSection');
+  section.classList.remove('hidden');
+  const title = document.getElementById('fortuneTitle');
+  title.textContent = result.fortune.emoji + ' ' + result.fortune.name;
+  title.className = 'text-5xl font-bold fortune-text mb-1 ' + result.fortune.cls;
+  document.getElementById('fortuneDate').textContent = result.date + 'の運勢';
+  document.getElementById('msgLove').textContent = result.love;
+  document.getElementById('msgWork').textContent = result.work;
+  document.getElementById('msgHealth').textContent = result.health;
+  document.getElementById('msgStudy').textContent = result.study;
+  const colorEl = document.getElementById('luckyColor');
+  colorEl.textContent = result.color;
+  document.getElementById('luckyNumber').textContent = String(result.number);
+  document.getElementById('luckyDirection').textContent = result.direction;
+}
+
+function checkAlreadyDrawn() {
+  const today = getTodayString();
+  const history = JSON.parse(localStorage.getItem('omikuji_history') || '[]');
+  return history.some(h => h.date === today);
+}
+
+document.getElementById('btnDraw').addEventListener('click', function() {
+  const today = getTodayString();
+  const btn = document.getElementById('btnDraw');
+  const stick1 = document.getElementById('stick1');
+
+  if (checkAlreadyDrawn()) {
+    // Show today's result
+    const result = drawFortune(today);
+    showResult(result);
+    document.getElementById('alreadyDrawn').classList.remove('hidden');
+    return;
+  }
+
+  btn.disabled = true;
+  btn.setAttribute('aria-label', 'おみくじを引いています...');
+  stick1.classList.add('shaking');
+
+  setTimeout(() => {
+    stick1.classList.remove('shaking');
+    const result = drawFortune(today);
+    saveToHistory(result);
+    showResult(result);
+    renderHistory();
+    btn.disabled = false;
+    btn.setAttribute('aria-label', 'おみくじを引く');
+  }, 1600);
+});
+
+// Init
+renderHistory();
+if (checkAlreadyDrawn()) {
+  document.getElementById('alreadyDrawn').classList.remove('hidden');
+  const result = drawFortune(getTodayString());
+  showResult(result);
+}
+</script>
+</body>
+</html>
